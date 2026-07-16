@@ -1,0 +1,26 @@
+# Minimal Airflow for the Milestone 1 DAG.
+#
+#   docker compose up
+#
+# Then open http://localhost:8080 (user: admin — password printed in the logs
+# and written to standalone_admin_password.txt), unpause `revenue_pipeline`, and
+# trigger it. Clean output lands in ./outputs/tables/.
+#
+# Uses `airflow standalone` (SQLite + SequentialExecutor) — enough to run and
+# demo one DAG. The pipeline's only extra dependency beyond the base image is
+# pandera; statsforecast/plotly are not needed for the extract→validate→load DAG.
+services:
+  airflow:
+    image: apache/airflow:2.10.4-python3.11
+    command: standalone
+    ports:
+      - "8080:8080"
+    environment:
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      PYTHONPATH: /opt/airflow
+      _PIP_ADDITIONAL_REQUIREMENTS: "pandera>=0.20,<0.23"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./src:/opt/airflow/src
+      - ./data:/opt/airflow/data
+      - ./outputs:/opt/airflow/outputs

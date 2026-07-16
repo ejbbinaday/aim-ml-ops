@@ -1,0 +1,66 @@
+[project]
+name = "aim-mlops"
+version = "0.1.0"
+description = "Milestone 1 — revenue forecasting data pipeline (extract → validate → load) for an Australian health & longevity platform, plus the Streamlit revenue page."
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    # ── core data ──
+    "pandas>=2.2,<3",
+    "numpy>=1.26,<2",
+    # ── enforced data-quality check ──
+    "pandera>=0.20,<0.23",
+    # ── forecasting pipeline (phases 2–5) ──
+    "statsforecast>=1.7,<2",
+    "statsmodels>=0.14,<0.15",
+    "ruptures>=1.1,<2",
+    "scipy>=1.11,<2",
+    "joblib>=1.3,<2",
+    "matplotlib>=3.7,<4",
+    "stripe>=9.0,<10",
+    # ── Streamlit revenue page ──
+    "streamlit>=1.32,<2",
+    "plotly>=5.18,<6",
+]
+
+[project.optional-dependencies]
+# Airflow is heavy and pins a large transitive tree, so it is not required to
+# run the pipeline via `uv run` or the tests. Install it only to serve the DAG
+# in the Airflow UI:  `uv sync --extra airflow`  (or use docker compose).
+airflow = [
+    "apache-airflow>=2.9,<2.11",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.6,<0.9",
+    "pytest>=8.0,<9",
+    "pre-commit>=3.7,<5",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+# ── Ruff ───────────────────────────────────────────────────────────────────
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["outputs", "data"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B"]
+# BLE001 blind-except is used intentionally in storage.py (S3 404 handling).
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# Runners and the standalone dashboard deliberately set sys.path before their
+# imports, so module-level imports are not at the top of the file.
+"scripts/*.py" = ["E402"]
+"dashboard.py" = ["E402"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
