@@ -10,6 +10,29 @@
 # demo one DAG. The pipeline's only extra dependency beyond the base image is
 # pandera; statsforecast/plotly are not needed for the extract→validate→load DAG.
 services:
+  # MLflow tracking server (Milestone 2). SQLite backend + local artifact
+  # store, both persisted under ./mlflow/. Start with:
+  #
+  #   docker compose up mlflow
+  #
+  # then point training at it:
+  #
+  #   MLFLOW_TRACKING_URI=http://localhost:5000 uv run python models/train.py
+  #
+  # UI: http://localhost:5000
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v3.15.1
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri sqlite:////mlflow/mlflow-server.db
+      --artifacts-destination /mlflow/mlartifacts
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlflow:/mlflow
+
   airflow:
     image: apache/airflow:2.10.4-python3.11
     command: standalone
