@@ -11,9 +11,10 @@ in a single MLflow run under the ``revenue-forecast`` experiment:
               and registered to the Model Registry as
               ``revenue-forecast-bundle`` with a version tag.
 
-Tracking URI comes from the ``MLFLOW_TRACKING_URI`` environment variable —
-never hardcoded. When unset, a serverless local SQLite store under ``mlflow/``
-is used so a fresh clone can train and inspect runs without any server:
+Tracking URI comes from the ``MLFLOW_TRACKING_URI`` environment variable when
+set. When unset, it intentionally falls back to a serverless local SQLite
+store under ``mlflow/`` so a fresh clone can train and inspect runs without
+any server:
 
     uv run python models/train.py
     uv run mlflow ui --backend-store-uri sqlite:///mlflow/mlflow.db
@@ -55,8 +56,8 @@ from src.revenue.pipeline_m1 import make_run_id
 
 EXPERIMENT_NAME = "revenue-forecast"
 REGISTERED_MODEL_NAME = "revenue-forecast-bundle"
-# Serverless fallback: SQLite backend under mlflow/ (registry-capable, unlike
-# a plain file store). The real URI must come from MLFLOW_TRACKING_URI.
+# Serverless fallback when MLFLOW_TRACKING_URI is unset: SQLite backend under
+# mlflow/ (registry-capable, unlike a plain file store).
 DEFAULT_TRACKING_URI = f"sqlite:///{_REPO_ROOT / 'mlflow' / 'mlflow.db'}"
 
 # series name → ModelBundle attribute

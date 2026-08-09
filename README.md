@@ -32,7 +32,7 @@ and pull request (`.github/workflows/ci.yml`).
 ## Requirements
 
 - [uv](https://docs.astral.sh/uv/) (Python 3.11)
-- Docker (only if you want to run the Airflow UI)
+- Docker (only for the Airflow UI and the MLflow tracking-server option)
 
 ## Quickstart
 
@@ -68,8 +68,10 @@ cross-validation metrics (MASE, RMSE, Winkler-80) as metrics, and the fitted
 model bundle registered to the **Model Registry** as `revenue-forecast-bundle`
 with a `milestone` version tag.
 
-The tracking URI always comes from the `MLFLOW_TRACKING_URI` environment
-variable — it is never hardcoded.
+The tracking URI is taken from the `MLFLOW_TRACKING_URI` environment variable
+when set (Option B below). When unset, `models/train.py` intentionally falls
+back to a local SQLite store at `mlflow/mlflow.db` (Option A), so a fresh
+clone can train and inspect runs with zero setup.
 
 ### Option A — serverless (SQLite, zero setup)
 
@@ -92,6 +94,11 @@ MLFLOW_TRACKING_URI=http://localhost:5000 uv run python models/train.py
 ```
 
 Both stores live under the gitignored `mlflow/` directory.
+
+> **macOS note:** AirPlay Receiver can occupy port `5000`. If the UI fails to
+> start, use port `5001` instead, e.g.
+> `uv run mlflow ui --backend-store-uri sqlite:///mlflow/mlflow.db --port 5001`
+> (and `MLFLOW_TRACKING_URI=http://localhost:5001` for Option B).
 
 ## Test suite (Milestone 2)
 
