@@ -1,0 +1,33 @@
+# Milestone 2 — CI: lint + tests + coverage on every push to main and every PR.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        # Reads .python-version (3.11) and uv.lock; includes the dev group
+        # (pytest, pytest-cov, ruff) by default.
+        run: uv sync
+
+      - name: Lint (ruff)
+        run: uv run ruff check .
+
+      - name: Tests + coverage
+        # Coverage scope: pipeline + training code (see [tool.coverage.run]
+        # omit list in pyproject.toml). Report is visible in the job output;
+        # not enforced as a gate for this milestone.
+        run: uv run pytest --cov=src --cov=models --cov-report=term-missing

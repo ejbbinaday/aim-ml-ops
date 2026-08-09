@@ -1,0 +1,105 @@
+@page {
+  size: A4;
+  margin: 22mm 20mm 20mm 20mm;
+  @top-left {
+    content: "MLOps LT 3  |  Repository: aim-ml-ops";
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 8.5pt;
+    color: #8a8f98;
+    vertical-align: bottom;
+    padding-bottom: 4mm;
+  }
+  @bottom-center {
+    content: "Page " counter(page) " of " counter(pages);
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 8.5pt;
+    color: #8a8f98;
+    padding-top: 4mm;
+  }
+}
+
+/* Page 1 already carries the title-block byline, so drop the running
+   header there; keep it on later pages for navigation. */
+@page:first {
+  @top-left { content: none; }
+}
+
+html { font-size: 10.5pt; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  color: #24292e;
+  line-height: 1.5;
+  margin: 0;
+}
+
+h1, h2, h3 {
+  color: #1b1f24;
+  line-height: 1.25;
+  break-after: avoid;
+}
+h1 { font-size: 21pt; margin: 0 0 2pt 0; }
+h3 { font-size: 12pt; font-weight: 600; color: #3a3f45; margin: 0 0 2pt 0; }
+
+/* section headings */
+h2 {
+  font-size: 14pt;
+  margin: 20pt 0 6pt 0;
+  padding-bottom: 4pt;
+  border-bottom: 1px solid #e3e6ea;
+}
+
+/* the "MLOps LT 3 · Repository" tagline paragraph right under the title block */
+h3 + p { margin-top: 2pt; }
+
+p { margin: 0 0 8pt 0; text-align: justify; hyphens: auto; }
+li { text-align: justify; hyphens: auto; }
+/* keep the title-block byline flush left, not justified */
+h3 + p { text-align: left; }
+
+/* keep a heading with the block that follows it (fixes orphaned subheadings) */
+h2 + p, h2 + ul, h2 + table { break-before: avoid; }
+p + ul { break-before: avoid; }
+
+ul { margin: 0 0 8pt 0; padding-left: 18pt; }
+li { margin: 0 0 3pt 0; }
+li { break-inside: avoid; }
+
+hr {
+  border: none;
+  border-top: 1px solid #e3e6ea;
+  margin: 14pt 0;
+}
+
+a { color: #0969da; text-decoration: none; }
+a code { color: #0969da; }
+
+code {
+  font-family: "SF Mono", "Menlo", "Consolas", monospace;
+  font-size: 9pt;
+  background: #f2f3f5;
+  padding: 1px 4px;
+  border-radius: 4px;
+  color: #1b1f24;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 6pt 0 10pt 0;
+  font-size: 9.5pt;
+  break-inside: avoid;
+}
+th, td {
+  border: 1px solid #e3e6ea;
+  padding: 6px 9px;
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: #f6f7f9;
+  font-weight: 600;
+  color: #1b1f24;
+}
+
+em { color: #3a3f45; }
