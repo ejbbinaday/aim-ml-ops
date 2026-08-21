@@ -100,6 +100,14 @@ at <http://localhost:5001>. Container-to-container tracking remains on port
 
 ## Drift monitoring (Final Project)
 
+On a fresh clone, train and register the model first:
+
+```bash
+uv run python models/train.py
+```
+
+Then generate the monitoring report:
+
 ```bash
 uv run python monitoring/run_report.py
 ```

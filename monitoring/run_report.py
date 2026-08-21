@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 
-from app.model_service import ModelService
+from app.model_service import ModelLoadError, ModelService
 
 if TYPE_CHECKING:
     from evidently.core.report import Snapshot
@@ -25,6 +25,18 @@ DRIFT_THRESHOLD = 0.2
 DEFAULT_SAMPLE_SIZE = 400
 DEFAULT_SEED = 20260821
 
+def load_monitoring_service() -> ModelService:
+    """Load the registered model or explain how to prepare a fresh clone."""
+
+    try:
+        return ModelService.load()
+    except ModelLoadError as exc:
+        raise SystemExit(
+            "Monitoring cannot start because no compatible registered model is available.\n"
+            "Run `uv run python models/train.py` first, then rerun "
+            "`uv run python monitoring/run_report.py`.\n"
+            f"Details: {exc}"
+        ) from exc
 
 def _prediction_by_horizon(service: ModelService) -> dict[int, float]:
     """Map each monitored request horizon to its cumulative point forecast."""
@@ -167,7 +179,7 @@ def run(output_dir: Path = REPORTS_DIR) -> dict[str, object]:
     """Load the configured model and write all monitoring deliverables."""
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    service = ModelService.load()
+    service = load_monitoring_service()
     reference, current = build_serving_datasets(service)
     reference.to_csv(output_dir / "reference_serving_data.csv", index=False)
     current.to_csv(output_dir / "current_serving_data.csv", index=False)

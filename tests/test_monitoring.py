@@ -7,10 +7,12 @@ from types import SimpleNamespace
 import pandas as pd
 import pytest
 
+from app.model_service import ModelLoadError
 from monitoring.run_report import (
     DRIFT_THRESHOLD,
     MONITORED_COLUMNS,
     build_serving_datasets,
+    load_monitoring_service,
     population_stability_index,
 )
 
@@ -62,3 +64,16 @@ def test_designed_shift_exceeds_documented_psi_threshold():
 def test_monitoring_requires_enough_rows():
     with pytest.raises(ValueError, match="at least 50"):
         build_serving_datasets(DeterministicForecastService(), sample_size=49)
+
+
+def test_monitoring_missing_model_gives_setup_instructions(monkeypatch):
+    def failed_load():
+        raise ModelLoadError("No compatible registered model.")
+
+    monkeypatch.setattr(
+        "monitoring.run_report.ModelService.load",
+        failed_load,
+    )
+
+    with pytest.raises(SystemExit, match="uv run python models/train.py"):
+        load_monitoring_service()
