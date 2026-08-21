@@ -110,6 +110,29 @@ def test_predict_rejects_invalid_contract_payloads(client: TestClient, payload: 
     assert response.status_code == 422
 
 
+@pytest.mark.parametrize(
+    "payload",
+    [
+        '{"horizon_months": NaN}',
+        '{"horizon_months": Infinity}',
+        '{"horizon_months": -Infinity}',
+        '{"horizon_months": 12, "interval_level": NaN}',
+    ],
+)
+def test_predict_rejects_non_finite_numbers_with_422(payload: str):
+    with TestClient(
+        create_app(service_loader=StubModelService),
+        raise_server_exceptions=False,
+    ) as test_client:
+        response = test_client.post(
+            "/predict",
+            content=payload,
+            headers={"content-type": "application/json"},
+        )
+
+    assert response.status_code == 422
+
+
 def test_application_fails_fast_when_model_cannot_load():
     def failed_loader():
         raise RuntimeError("registry unavailable")

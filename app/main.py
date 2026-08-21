@@ -3,16 +3,31 @@
 from __future__ import annotations
 
 import logging
+import math
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
 from app.model_service import ForecastContractError, ModelService
 from app.schemas import HealthResponse, PredictionRequest, PredictionResponse
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _json_safe(value: object) -> object:
+    """Convert non-finite floats in validation errors into JSON-safe strings."""
+
+    if isinstance(value, float) and not math.isfinite(value):
+        return str(value)
+    if isinstance(value, dict):
+        return {key: _json_safe(item) for key, item in value.items()}
+    if isinstance(value, list | tuple):
+        return [_json_safe(item) for item in value]
+    return value
 
 
 def get_model_service(request: Request) -> ModelService:
@@ -53,6 +68,16 @@ def create_app(service_loader: Callable[[], ModelService] | None = None) -> Fast
         ),
         lifespan=lifespan,
     )
+
+    @application.exception_handler(RequestValidationError)
+    async def validation_exception_handler(
+        _request: Request,
+        exc: RequestValidationError,
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content={"detail": _json_safe(exc.errors())},
+        )
 
     @application.get("/health", response_model=HealthResponse)
     def health(service: ModelServiceDependency) -> dict[str, str]:
