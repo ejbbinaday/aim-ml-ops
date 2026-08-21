@@ -1,4 +1,4 @@
-# Milestone 2 — CI: lint + tests + coverage on every push to main and every PR.
+# Final Project CI: lint + tests + coverage on every push to main and every PR.
 name: CI
 
 on:
@@ -27,7 +27,5 @@ jobs:
         run: uv run ruff check .
 
       - name: Tests + coverage
-        # Coverage scope: pipeline + training code (see [tool.coverage.run]
-        # omit list in pyproject.toml). Report is visible in the job output;
-        # not enforced as a gate for this milestone.
-        run: uv run pytest --cov=src --cov=models --cov-report=term-missing
+        # Coverage scope and the 60% quality gate live in pyproject.toml.
+        run: uv run pytest --cov --cov-report=term-missing
