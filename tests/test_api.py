@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 from datetime import date
+from types import SimpleNamespace
 
 import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
-from app.model_service import ForecastContractError, ModelConfig, ModelService
+from app.model_service import ForecastContractError, ModelConfig, ModelLoadError, ModelService
 
 
 class StubModelService:
@@ -110,6 +111,45 @@ def test_predict_rejects_invalid_contract_payloads(client: TestClient, payload: 
     assert response.status_code == 422
 
 
+@pytest.mark.parametrize(
+    "body",
+    [
+        '{"horizon_months":NaN}',
+        '{"horizon_months":Infinity}',
+        '{"horizon_months":-Infinity}',
+        '{"horizon_months":2,"interval_level":NaN}',
+    ],
+)
+def test_predict_returns_serializable_422_for_non_finite_numbers(
+    client: TestClient, body: str
+):
+    response = client.post(
+        "/predict",
+        content=body,
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == 422
+    assert response.headers["content-type"].startswith("application/json")
+    assert response.json()["detail"]
+
+
+def test_application_warms_forecast_engine_before_reporting_ready():
+    service = StubModelService()
+    calls: list[tuple[int, int]] = []
+    original_forecast = service.forecast
+
+    def tracked_forecast(horizon_months: int, interval_level: int):
+        calls.append((horizon_months, interval_level))
+        return original_forecast(horizon_months, interval_level)
+
+    service.forecast = tracked_forecast  # type: ignore[method-assign]
+    with TestClient(create_app(service_loader=lambda: service)) as test_client:
+        assert test_client.get("/health").status_code == 200
+
+    assert calls == [(1, 80)]
+
+
 def test_application_fails_fast_when_model_cannot_load():
     def failed_loader():
         raise RuntimeError("registry unavailable")
@@ -142,3 +182,34 @@ def test_model_service_rejects_incompatible_model_output():
 
     with pytest.raises(ForecastContractError, match="missing required confidence fields"):
         service.forecast(horizon_months=1, interval_level=80)
+
+
+def test_model_service_resolves_configured_registry_alias():
+    class AliasClient:
+        def get_model_version_by_alias(self, name: str, alias: str):
+            assert name == "revenue-forecast-bundle"
+            assert alias == "champion"
+            return SimpleNamespace(version="7")
+
+    config = ModelConfig(
+        tracking_uri="sqlite:///test.db",
+        model_name="revenue-forecast-bundle",
+        model_version="champion",
+    )
+
+    assert ModelService._resolve_version(AliasClient(), config) == "7"  # type: ignore[arg-type]
+
+
+def test_model_service_reports_missing_registry_alias_actionably():
+    class MissingAliasClient:
+        def get_model_version_by_alias(self, _name: str, _alias: str):
+            raise KeyError("missing")
+
+    config = ModelConfig(
+        tracking_uri="sqlite:///test.db",
+        model_name="revenue-forecast-bundle",
+        model_version="champion",
+    )
+
+    with pytest.raises(ModelLoadError, match="Register one first"):
+        ModelService._resolve_version(MissingAliasClient(), config)  # type: ignore[arg-type]

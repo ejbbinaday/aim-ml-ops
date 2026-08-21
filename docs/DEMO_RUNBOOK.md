@@ -18,6 +18,7 @@ terminal open, then prepare these browser tabs:
 1. <http://localhost:8000/docs>
 2. <http://localhost:5000> (MLflow)
 3. `reports/evidently_report.html` opened in the browser
+4. `reports/evidently_prediction_drift.html` opened in the browser
 
 ## Recording sequence
 
@@ -52,23 +53,32 @@ correct.
 
 ### 4. Show model governance (25 seconds)
 
-In MLflow, open **Models → revenue-forecast-bundle → latest compatible
-version**. Show the `serving_contract=forecast-intervals-v1` and
+In MLflow, open **Models → revenue-forecast-bundle → champion**. Show the
+concrete version behind that alias, the `serving_contract=forecast-intervals-v1` and
 `final_project=true` tags, run link, parameters, metrics, and artifacts.
 
 ### 5. Show automated quality controls (20 seconds)
 
-Show the green GitHub Actions run. Mention 42 local tests across validation,
+Show the green GitHub Actions run. Mention 50 local tests across validation,
 model quality, integration, API behavior, storage, and monitoring, plus the
 60% CI coverage gate (the verified local result is about 80%).
 
 ### 6. Show monitoring and responsible interpretation (35 seconds)
 
-Open `reports/evidently_report.html`. Show that both `horizon_months` input
-drift and cumulative `prediction` drift are detected. State that the datasets
-are deterministic, synthetic, and PII-free and intentionally demonstrate a
-request-mix shift; drift is an investigation signal, not proof of bad accuracy
-and not an automatic retraining trigger.
+Generate the report from the repository root, then open it in the browser:
+
+```bash
+uv run python monitoring/run_report.py
+open reports/evidently_report.html
+open reports/evidently_prediction_drift.html
+```
+
+Show the separate request-input and monthly-prediction reports. Explain that
+`horizon_months` drift measures how the API is being used, while prediction
+drift measures all monthly forecast values returned by those requests. State
+that the datasets are deterministic, synthetic, and PII-free and intentionally
+demonstrate a request-mix shift; drift is an investigation signal, not proof of
+bad accuracy and not an automatic retraining trigger.
 
 ### 7. Close (10 seconds)
 
@@ -82,4 +92,4 @@ docker compose down
 ```
 
 Confirm the recording clearly shows successful API responses, the registered
-model identity, a green CI run, and the Evidently results.
+model identity, a green CI run, and both Evidently results.

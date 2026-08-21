@@ -14,7 +14,7 @@ import pandas as pd
 from mlflow.tracking import MlflowClient
 
 DEFAULT_MODEL_NAME = "revenue-forecast-bundle"
-DEFAULT_MODEL_VERSION = "latest"
+DEFAULT_MODEL_VERSION = "champion"
 MAX_HORIZON_MONTHS = 24
 SERVING_CONTRACT_TAG = "forecast-intervals-v1"
 
@@ -106,10 +106,20 @@ class ModelService:
     @staticmethod
     def _resolve_version(client: MlflowClient, config: ModelConfig) -> str:
         requested = config.model_version
-        if requested.lower() != "latest":
-            if not requested.isdigit() or int(requested) < 1:
-                raise ModelLoadError("MODEL_VERSION must be a positive integer or 'latest'.")
+        if requested.isdigit():
+            if int(requested) < 1:
+                raise ModelLoadError("MODEL_VERSION must be a positive integer.")
             return requested
+
+        if requested.lower() != "latest":
+            try:
+                aliased = client.get_model_version_by_alias(config.model_name, requested)
+            except Exception as exc:
+                raise ModelLoadError(
+                    f"No {config.model_name!r} model version is assigned to alias "
+                    f"{requested!r}. Register one first: uv run python models/train.py"
+                ) from exc
+            return str(aliased.version)
 
         versions = client.search_model_versions(f"name='{config.model_name}'")
         compatible = [
@@ -120,7 +130,8 @@ class ModelService:
         if not compatible:
             raise ModelLoadError(
                 f"No {config.model_name!r} version has the required "
-                f"{SERVING_CONTRACT_TAG!r} contract."
+                f"{SERVING_CONTRACT_TAG!r} contract. "
+                "Register one first: uv run python models/train.py"
             )
         return str(max(int(version.version) for version in compatible))
 

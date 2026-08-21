@@ -97,8 +97,12 @@ The service reads:
 
 - `MLFLOW_TRACKING_URI`
 - `MODEL_NAME` (default: `revenue-forecast-bundle`)
-- `MODEL_VERSION` (positive integer or `latest`)
+- `MODEL_VERSION` (positive integer, registry alias, or `latest`; default:
+  `champion`)
 
-When `MODEL_VERSION=latest`, the service selects the highest registry version
-tagged with `serving_contract=forecast-intervals-v1`, then reports the concrete
-version in `/health` and `/predict`.
+The default `champion` alias makes rollback explicit: moving the alias in
+MLflow changes which compatible model will be loaded on the next API startup,
+without rebuilding the image. A positive integer pins one version. When
+`MODEL_VERSION=latest`, the service instead selects the highest registry
+version tagged with `serving_contract=forecast-intervals-v1`. Every mode reports
+the resolved concrete version in `/health` and `/predict`.

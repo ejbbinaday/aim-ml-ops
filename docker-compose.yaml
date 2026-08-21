@@ -63,10 +63,22 @@ services:
     environment:
       MLFLOW_TRACKING_URI: http://mlflow:5000
       MODEL_NAME: ${MODEL_NAME:-revenue-forecast-bundle}
-      MODEL_VERSION: ${MODEL_VERSION:-latest}
+      MODEL_VERSION: ${MODEL_VERSION:-champion}
     depends_on:
       trainer:
         condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request;
+          urllib.request.urlopen('http://localhost:8000/health', timeout=5)
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 90s
     restart: unless-stopped
 
   airflow:

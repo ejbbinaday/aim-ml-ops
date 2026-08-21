@@ -101,21 +101,29 @@ at <http://localhost:5001>. Container-to-container tracking remains on port
 ## Drift monitoring (Final Project)
 
 ```bash
+# First ensure a compatible model is registered locally.
+uv run python models/train.py
+
+# Then generate both monitoring views from the repository root.
 uv run python monitoring/run_report.py
 ```
 
 This command uses the configured registered model to create deterministic,
-PII-free reference/current serving datasets and writes:
+PII-free reference/current serving datasets and writes two distinct views:
 
-- `reports/evidently_report.html` — visual Evidently report;
-- `reports/evidently_report.json` — machine-readable metric results;
+- `reports/evidently_report.html` / `.json` — request-input drift for
+  `horizon_months`;
+- `reports/evidently_prediction_drift.html` / `.json` — drift in the returned
+  monthly revenue predictions;
 - `reports/findings.md` — interpretation, response, and limitations;
-- `reports/monitoring_summary.json` and the two source CSV files — provenance.
+- `reports/monitoring_summary.json` and four source CSV files — provenance.
 
 The current example intentionally shifts requests from shorter to longer
-forecast horizons so both API-input and cumulative-prediction drift are
-visible. It is a course demonstration, not claimed production behavior or
-evidence of model inaccuracy.
+forecast horizons. The input report measures the request mix, while the
+prediction report measures all monthly forecast values returned by those
+requests; they therefore have separate row sets and separate PSI results. It is
+a course demonstration, not claimed production behavior or evidence of model
+inaccuracy.
 
 ### Run via Airflow (`docker compose up`)
 
@@ -184,8 +192,8 @@ The suite covers the three spec-mandated categories:
 | `tests/test_model_quality.py` | Model quality | Held-out 12-month MASE beats the seasonal-naïve threshold (`MASE_THRESHOLD = 1.0`, derived from Milestone 1 CV results); forecasts have the right shape, no NaNs, non-negative values, ordered intervals |
 | `tests/test_pipeline_integration.py` | Integration | extract → validate → load end-to-end on synthetic data produces the versioned artifact; `models/train.py` end-to-end logs params/metrics and registers the model against a temp MLflow store |
 | `tests/test_storage.py` | (support) | Round-trips for the artifact I/O layer every test above depends on |
-| `tests/test_api.py` | Serving contract | Health, valid 80/95% forecasts, invalid 422 payloads, startup failure, incompatible model output |
-| `tests/test_monitoring.py` | Monitoring | Deterministic PII-free serving samples and a known PSI shift above the documented threshold |
+| `tests/test_api.py` | Serving contract | Health, startup warm-up, valid forecasts, serializable 422 errors (including NaN/Infinity), model aliases, startup failure, incompatible output |
+| `tests/test_monitoring.py` | Monitoring | Deterministic PII-free request/output samples, distinct PSI signals, and the direct script entry point |
 
 Coverage is scoped to serving + training + monitoring + pipeline code
 (`app/`, `models/`, `monitoring/`, `src/`); thin

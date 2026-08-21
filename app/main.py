@@ -3,16 +3,33 @@
 from __future__ import annotations
 
 import logging
+import math
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
 from app.model_service import ForecastContractError, ModelService
 from app.schemas import HealthResponse, PredictionRequest, PredictionResponse
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _json_safe(value: object) -> object:
+    """Replace non-finite floats that strict JSON cannot represent."""
+
+    if isinstance(value, float) and not math.isfinite(value):
+        return repr(value)
+    if value is None or isinstance(value, str | int | float | bool):
+        return value
+    if isinstance(value, dict):
+        return {key: _json_safe(item) for key, item in value.items()}
+    if isinstance(value, list | tuple | set):
+        return [_json_safe(item) for item in value]
+    return str(value)
 
 
 def get_model_service(request: Request) -> ModelService:
@@ -38,9 +55,13 @@ def create_app(service_loader: Callable[[], ModelService] | None = None) -> Fast
     @asynccontextmanager
     async def lifespan(application: FastAPI):
         try:
-            application.state.model_service = loader()
+            service = loader()
+            # Pay the forecast engine's one-off initialization cost before the
+            # service reports ready, so the first real caller does not.
+            service.forecast(1, 80)
         except Exception as exc:
             raise RuntimeError(f"Forecast model startup failed: {exc}") from exc
+        application.state.model_service = service
         yield
         application.state.model_service = None
 
@@ -53,6 +74,18 @@ def create_app(service_loader: Callable[[], ModelService] | None = None) -> Fast
         ),
         lifespan=lifespan,
     )
+
+    @application.exception_handler(RequestValidationError)
+    async def handle_validation_error(
+        _request: Request,
+        exc: RequestValidationError,
+    ) -> JSONResponse:
+        """Return a serializable 422 response for every invalid request body."""
+
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content={"detail": _json_safe(exc.errors())},
+        )
 
     @application.get("/health", response_model=HealthResponse)
     def health(service: ModelServiceDependency) -> dict[str, str]:

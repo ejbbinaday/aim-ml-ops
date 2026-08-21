@@ -6,10 +6,11 @@
 - [x] Strict request/response contract is documented in `docs/SERVING_CONTRACT.md`.
 - [x] FastAPI implements `/health`, `/predict`, startup model loading, and 422 validation.
 - [x] MLflow model versions carry the serving-contract tag and exact run identity.
-- [x] Dockerfile, Compose services, health check, trainer gate, and `.env.example` exist.
+- [x] Dockerfile, Compose services, MLflow/API health checks, trainer gate, and `.env.example` exist.
 - [x] API and monitoring tests are included.
 - [x] CI runs lint plus tests with a 60% coverage gate.
-- [x] Evidently HTML/JSON report, PII-free datasets, summary, and findings are included.
+- [x] Separate Evidently input/prediction HTML/JSON reports, PII-free datasets,
+      summary, and findings are included.
 - [x] README contains local, Docker, API, monitoring, and test commands.
 - [x] Demo sequence is documented in `docs/DEMO_RUNBOOK.md`.
 
@@ -31,7 +32,8 @@ uv run pytest --cov --cov-report=term-missing
 - [ ] Confirm a valid `/predict` request returns the requested monthly forecasts.
 - [ ] Confirm an invalid request such as `{"horizon_months":0}` returns HTTP 422.
 - [ ] Open MLflow at <http://localhost:5000> and verify the served version and run.
-- [ ] Open `reports/evidently_report.html` and verify both monitored columns appear.
+- [ ] Open `reports/evidently_report.html` and verify the request-input result.
+- [ ] Open `reports/evidently_prediction_drift.html` and verify the monthly-output result.
 - [ ] Stop the stack with `docker compose down`.
 
 ## Git and submission checks
