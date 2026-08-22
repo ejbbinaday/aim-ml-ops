@@ -1,0 +1,17 @@
+{
+  "dataset_kind": "deterministic synthetic serving traffic",
+  "seed": 20260821,
+  "reference_rows": 400,
+  "current_rows": 400,
+  "reference_prediction_rows": 2448,
+  "current_prediction_rows": 6915,
+  "drift_method": "population_stability_index",
+  "drift_threshold": 0.2,
+  "horizon_months_psi": 2.722791616189118,
+  "prediction_psi": 0.6755335882365969,
+  "model": {
+    "name": "revenue-forecast-bundle",
+    "version": "2",
+    "run_id": "c404df276c8946cd886502763d264815"
+  }
+}

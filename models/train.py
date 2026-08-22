@@ -79,27 +79,37 @@ def resolve_tracking_uri() -> str:
 
 
 def bundle_forecast(bundle: ModelBundle, h: int) -> pd.DataFrame:
-    """Point forecasts for all three streams + Total over the next `h` months."""
-    from src.revenue.phase5_forecast import _forecast_index, _forecast_series
+    """Forecasts and calibrated intervals for all streams over ``h`` months."""
+    if not 1 <= h <= FORECAST_LONG:
+        raise ValueError(f"h must be between 1 and {FORECAST_LONG} months")
+
+    from src.revenue.phase5_forecast import (
+        _build_forecast_df,
+        _forecast_index,
+        _forecast_series,
+    )
 
     idx = _forecast_index(bundle.iv_league.train.index[-1], h)
-    out = pd.DataFrame({"month": idx})
-    for name, attr in SERIES_ATTRS.items():
-        point, *_ = _forecast_series(getattr(bundle, attr), h)
-        out[name] = point
-    out["Total"] = out[SERIES].sum(axis=1)
-    return out
+    iv = _forecast_series(bundle.iv_league, h)
+    mrr = _forecast_series(bundle.mpd_core_mrr, h)
+    one_time = _forecast_series(bundle.mpd_core_onetime, h)
+    return _build_forecast_df(idx, iv, mrr, one_time)
 
 
 class RevenueForecastModel(mlflow.pyfunc.PythonModel):
     """pyfunc wrapper: input is a DataFrame with an integer ``h`` column
-    (forecast horizon in months); output is the point-forecast frame from
-    :func:`bundle_forecast`."""
+    (forecast horizon in months); output contains per-stream point forecasts
+    plus 80% and 95% total-revenue prediction intervals."""
 
-    def load_context(self, context):
+    def load_context(self, context: mlflow.pyfunc.PythonModelContext) -> None:
         self._bundle = joblib.load(context.artifacts["bundle"])
 
-    def predict(self, context, model_input, params=None):
+    def predict(
+        self,
+        context: mlflow.pyfunc.PythonModelContext,
+        model_input: pd.DataFrame,
+        params: dict[str, object] | None = None,
+    ) -> pd.DataFrame:
         h = int(model_input["h"].iloc[0])
         return bundle_forecast(self._bundle, h)
 
@@ -128,10 +138,18 @@ def _log_registered_model(bundle: ModelBundle, run_id: str) -> None:
     version = model_info.registered_model_version
     client = MlflowClient()
     client.set_model_version_tag(REGISTERED_MODEL_NAME, version, "milestone", "2")
+    client.set_model_version_tag(
+        REGISTERED_MODEL_NAME,
+        version,
+        "serving_contract",
+        "forecast-intervals-v1",
+    )
+    client.set_model_version_tag(REGISTERED_MODEL_NAME, version, "final_project", "true")
     client.set_model_version_tag(REGISTERED_MODEL_NAME, version, "pipeline_run_id", run_id)
     client.set_model_version_tag(
         REGISTERED_MODEL_NAME, version, "input_sha256", bundle.input_sha256[:12]
     )
+    client.set_registered_model_alias(REGISTERED_MODEL_NAME, "champion", version)
     print(f"  MLflow: registered {REGISTERED_MODEL_NAME} v{version} (milestone=2)")
 
 
